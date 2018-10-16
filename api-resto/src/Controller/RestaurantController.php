@@ -9,6 +9,8 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 /**
  * @Route("/restaurant")
@@ -18,66 +20,86 @@ class RestaurantController extends AbstractController
     /**
      * @Route("/", name="restaurant_index", methods="GET")
      */
-    public function index(RestaurantRepository $restaurantRepository): Response
+    public function getRestaurantAction(RestaurantRepository $restaurantRepository): Response
     {
-        return $this->render('restaurant/index.html.twig', ['restaurants' => $restaurantRepository->findAll()]);
+        $restaurants = $restaurantRepository->findAll();
+        $_restaurant = [];
+        $_restaurants = [];
+
+        //sérialisation manuelle
+        foreach ($restaurants as $restaurant) {
+            $_restaurant['name'] = $restaurant->getName();
+            $_restaurant['adress'] = $restaurant->getAddress();
+            $_restaurant['phone'] = $restaurant->getPhone();
+            $_restaurant['id'] = $restaurant->getId();
+            $_restaurants[] = $_restaurant;
+        }
+        return new JsonResponse($_restaurants,200);
+
     }
 
     /**
-     * @Route("/new", name="restaurant_new", methods="GET|POST")
+     * @Route("/", name="restaurant_new", methods="POST")
      */
-    public function new(Request $request): Response
+    public function postRestaurantAction(Request $request, ValidatorInterface $validator): Response
     {
         $restaurant = new Restaurant();
+        $body = $request->getContent();
+        $data = json_decode($body,true);
         $form = $this->createForm(RestaurantType::class, $restaurant);
-        $form->handleRequest($request);
+        $form->submit($data);
+        $errors = $validator->validate($restaurant);
 
-        if ($form->isSubmitted() && $form->isValid()) {
+    if (count($errors) > 0) {
+        $errorsString = (string) $errors;
+        return new JsonResponse($errorsString);
+    }
             $em = $this->getDoctrine()->getManager();
             $em->persist($restaurant);
             $em->flush();
-
             return $this->redirectToRoute('restaurant_index');
-        }
 
-        return $this->render('restaurant/new.html.twig', [
-            'restaurant' => $restaurant,
-            'form' => $form->createView(),
-        ]);
     }
 
     /**
      * @Route("/{id}", name="restaurant_show", methods="GET")
      */
-    public function show(Restaurant $restaurant): Response
+    public function showRestaurantAction(Restaurant $restaurant): Response
     {
-        return $this->render('restaurant/show.html.twig', ['restaurant' => $restaurant]);
+            $_restaurant['name'] = $restaurant->getName();
+            $_restaurant['adress'] = $restaurant->getAddress();
+            $_restaurant['phone'] = $restaurant->getPhone();
+            $_restaurant['id'] = $restaurant->getId();
+
+        return new JsonResponse($_restaurant, 200);
+
     }
 
     /**
-     * @Route("/{id}/edit", name="restaurant_edit", methods="GET|POST")
+     * @Route("/{id}", name="restaurant_edit", methods="PUT")
      */
-    public function edit(Request $request, Restaurant $restaurant): Response
+    public function putRestaurantAction(Request $request, Restaurant $restaurant,  ValidatorInterface $validator): Response
     {
+        $body = $request->getContent();
+        $data = json_decode($body, true);
         $form = $this->createForm(RestaurantType::class, $restaurant);
-        $form->handleRequest($request);
+        $form->submit($data);
+        $errors = $validator->validate($restaurant);
 
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->getDoctrine()->getManager()->flush();
-
-            return $this->redirectToRoute('restaurant_edit', ['id' => $restaurant->getId()]);
+        if (count($errors) > 0) {
+            $errorsString = (string) $errors;
+            return new JsonResponse($errorsString);
         }
+            $em = $this->getDoctrine()->getManager();
+            $em->flush();
+            return $this->redirectToRoute('restaurant_index');
 
-        return $this->render('restaurant/edit.html.twig', [
-            'restaurant' => $restaurant,
-            'form' => $form->createView(),
-        ]);
     }
 
     /**
      * @Route("/{id}", name="restaurant_delete", methods="DELETE")
      */
-    public function delete(Request $request, Restaurant $restaurant): Response
+    public function deleteRestaurantAction(Request $request, Restaurant $restaurant): Response
     {
         if ($this->isCsrfTokenValid('delete'.$restaurant->getId(), $request->request->get('_token'))) {
             $em = $this->getDoctrine()->getManager();
