@@ -99,13 +99,11 @@ class RestaurantController extends AbstractController
     /**
      * @Route("/{id}", name="restaurant_delete", methods="DELETE")
      */
-    public function deleteRestaurantAction(Request $request, Restaurant $restaurant): Response
+    public function supprimerRestaurantAction(Restaurant $restaurant): Response
     {
-        if ($this->isCsrfTokenValid('delete'.$restaurant->getId(), $request->request->get('_token'))) {
             $em = $this->getDoctrine()->getManager();
             $em->remove($restaurant);
             $em->flush();
-        }
 
         return $this->redirectToRoute('restaurant_index');
     }
